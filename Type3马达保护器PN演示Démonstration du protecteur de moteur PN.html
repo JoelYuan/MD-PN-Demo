@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>马保PN通信交互演示 / Demo de communication PN du protection moteur (Basic Type 3)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        /* 语言切换按钮 */
+        .lang-switch {
+            display: flex;
+            background-color: #f0f4f8;
+            padding: 8px 20px;
+            gap: 10px;
+            justify-content: flex-end;
+            border-bottom: 1px solid #e3f2fd;
+        }
+        .lang-btn {
+            padding: 6px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .lang-btn.active {
+            background-color: #1976d2;
+            color: white;
+        }
+        /* 视图切换按钮 */
+        .view-switch {
+            display: flex;
+            background-color: #1a3c6d;
+            padding: 10px 20px;
+            gap: 10px;
+        }
+        .view-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            background-color: #2d5a96;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .view-btn.active {
+            background-color: #3498db;
+            transform: scale(1.05);
+        }
+        /* 总览视图 */
+        .overview-view {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .detail-view {
+            display: none;
+            padding: 20px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+        /* 就地控制区域 */
+        .local-control {
+            background-color: #f8fbff;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e3f2fd;
+        }
+        .control-title {
+            color: #1a3c6d;
+            font-size: 18px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e3f2fd;
+        }
+        .local-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .control-btn {
+            padding: 15px 0;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .local-start-btn {
+            background-color: #4caf50;
+            color: white;
+        }
+        .local-start-btn:disabled {
+            background-color: #a5d6a7;
+            cursor: not-allowed;
+        }
+        .local-stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .local-reset-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        .fault-switch-btn {
+            background-color: #d32f2f;
+            color: white;
+        }
+        .fault-switch-btn.active {
+            background-color: #7b1fa2;
+        }
+        .local-mode-indicator {
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .indicator-local {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 2px solid #c8e6c9;
+        }
+        .indicator-remote {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 2px solid #bbdefb;
+        }
+        /* 电机动态区域 */
+        .motor-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .motor-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin-bottom: 20px;
+        }
+        .motor-body {
+            width: 150px;
+            height: 150px;
+            background-color: #90caf9;
+            border-radius: 50%;
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #1a3c6d;
+            border: 5px solid #1976d2;
+        }
+        .motor-shaft {
+            width: 40px;
+            height: 10px;
+            background-color: #757575;
+            position: absolute;
+            right: -20px;
+            top: 50px;
+            border-radius: 4px;
+        }
+        .motor-fan {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            top: 50px;
+            left: 50px;
+            border-radius: 50%;
+            transition: transform 0.05s linear;
+        }
+        .fan-blade {
+            position: absolute;
+            width: 100px;
+            height: 10px;
+            background-color: rgba(26, 60, 109, 0.3);
+            border-radius: 5px;
+            top: 45px;
+            left: 0;
+        }
+        .fan-blade:nth-child(2) {
+            transform: rotate(90deg);
+        }
+        .fan-blade:nth-child(3) {
+            transform: rotate(45deg);
+        }
+        .fan-blade:nth-child(4) {
+            transform: rotate(135deg);
+        }
+        .motor-status {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a3c6d;
+            text-align: center;
+        }
+        .status-running {
+            color: #4caf50;
+        }
+        .status-stopped {
+            color: #f44336;
+        }
+        .status-fault {
+            color: #ff9800;
+        }
+        .motor-params {
+            margin-top: 15px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+        .param-item {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1976d2;
+        }
+        /* HMI控制界面 */
+        .hmi-interface {
+            grid-column: 1 / 3;
+            background-color: #f0f4f8;
+            border-radius: 8px;
+            padding: 25px;
+            border: 2px solid #1a3c6d;
+        }
+        .hmi-title {
+            color: #1a3c6d;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .hmi-mode-switch {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .hmi-mode-btn {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .hmi-mode-btn.local {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 2px solid #c8e6c9;
+        }
+        .hmi-mode-btn.remote {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 2px solid #bbdefb;
+        }
+        .hmi-mode-btn.active {
+            background-color: #2e7d32;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .hmi-mode-btn.remote.active {
+            background-color: #1976d2;
+        }
+        .hmi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        .hmi-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .hmi-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .hmi-start-btn {
+            background-color: #4caf50;
+            color: white;
+        }
+        .hmi-start-btn:disabled {
+            background-color: #a5d6a7;
+            cursor: not-allowed;
+        }
+        .hmi-stop-btn {
+            background-color: #f44336;
+            color: white;
+        }
+        .hmi-reset-btn {
+            background-color: #ff9800;
+            color: white;
+        }
+        .hmi-status {
+            background-color: white;
+            border-radius: 6px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .status-label {
+            font-weight: 500;
+        }
+        .status-value {
+            font-weight: 600;
+        }
+        .fault-value {
+            color: #f44336;
+        }
+        /* 细节视图样式 */
+        .detail-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8fbff;
+            border-radius: 8px;
+            border-left: 4px solid #1976d2;
+        }
+        .detail-title {
+            color: #1a3c6d;
+            font-size: 18px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #d0d8e0;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #1a3c6d;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background-color: #f0f7ff;
+        }
+        .byte-highlight {
+            background-color: #fff3e0;
+            font-weight: bold;
+        }
+        .bit-active {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        .enable-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #4caf50;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .disable-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #e0e0e0;
+            color: #666;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .section-divider {
+            background-color: #1a3c6d;
+            color: white;
+            font-weight: 600;
+        }
+        /* 通信数据实时显示 */
+        .communication-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(26, 60, 109, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+            min-width: 350px;
+        }
+        .comm-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .comm-data {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+        /* 双语文本样式 */
+        .text-zh {
+            display: block;
+        }
+        .text-fr {
+            display: none;
+        }
+        body.fr .text-zh {
+            display: none;
+        }
+        body.fr .text-fr {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 语言切换按钮 -->
+        <div class="lang-switch">
+            <button class="lang-btn active" id="zhBtn">中文</button>
+            <button class="lang-btn" id="frBtn">Français</button>
+        </div>
+        <!-- 视图切换按钮 -->
+        <div class="view-switch">
+            <button class="view-btn active" id="overviewBtn">
+                <span class="text-zh">总览视图</span>
+                <span class="text-fr">Vue d'ensemble</span>
+            </button>
+            <button class="view-btn" id="detailBtn">
+                <span class="text-zh">细节视图</span>
+                <span class="text-fr">Vue détaillée</span>
+            </button>
+        </div>
+        <!-- 总览视图 -->
+        <div class="overview-view" id="overviewView">
+            <div class="local-control">
+                <h3 class="control-title">
+                    <span class="text-zh">就地控制单元</span>
+                    <span class="text-fr">Unité de commande locale</span>
+                </h3>
+                <div class="local-buttons">
+                    <button class="control-btn local-start-btn" id="localStartBtn">
+                        <span class="text-zh">就地启动 (仅就地模式可用)</span>
+                        <span class="text-fr">Démarrage local (mode local seulement)</span>
+                    </button>
+                    <button class="control-btn local-stop-btn" id="localStopBtn">
+                        <span class="text-zh">紧急停止 (全模式可用)</span>
+                        <span class="text-fr">Arrêt d'urgence (tous modes)</span>
+                    </button>
+                    <button class="control-btn local-reset-btn" id="localResetBtn">
+                        <span class="text-zh">故障复位</span>
+                        <span class="text-fr">Réinitialisation de panne</span>
+                    </button>
+                    <button class="control-btn fault-switch-btn" id="faultSwitchBtn">
+                        <span class="text-zh">触发过载故障</span>
+                        <span class="text-fr">Déclencher panne surcharge</span>
+                    </button>
+                </div>
+                <div class="local-mode-indicator indicator-local" id="localModeIndicator">
+                    <span class="text-zh">当前模式：就地模式</span>
+                    <span class="text-fr">Mode actuel : Mode local</span>
+                </div>
+            </div>
+            <div class="motor-display">
+                <h3 class="control-title">
+                    <span class="text-zh">电机状态显示</span>
+                    <span class="text-fr">Affichage état moteur</span>
+                </h3>
+                <div class="motor-container">
+                    <div class="motor-body">
+                        <span class="text-zh">电机</span>
+                        <span class="text-fr">Moteur</span>
+                    </div>
+                    <div class="motor-shaft"></div>
+                    <div class="motor-fan" id="motorFan">
+                        <div class="fan-blade"></div>
+                        <div class="fan-blade"></div>
+                        <div class="fan-blade"></div>
+                        <div class="fan-blade"></div>
+                    </div>
+                </div>
+                <div class="motor-status status-stopped" id="motorStatus">
+                    <span class="text-zh">状态：停止</span>
+                    <span class="text-fr">État : Arrêté</span>
+                </div>
+                <div class="motor-params">
+                    <div class="param-item">
+                        <span class="text-zh">运行电流：</span>
+                        <span class="text-fr">Courant de fonctionnement : </span>
+                        <span id="realTimeCurrent">0.0 A</span>
+                    </div>
+                    <div class="param-item">
+                        <span class="text-zh">绕组温度：</span>
+                        <span class="text-fr">Température enroulement : </span>
+                        <span id="realTimeTemp">25.0 ℃</span>
+                    </div>
+                    <div class="param-item">
+                        <span class="text-zh">累计运行：</span>
+                        <span class="text-fr">Temps total de fonctionnement : </span>
+                        <span id="totalOperatingHours">0.0 h</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hmi-interface">
+                <h3 class="hmi-title">
+                    <span class="text-zh">HMI远程控制界面 (Basic Type 3 核心)</span>
+                    <span class="text-fr">Interface HMI (cœur Basic Type 3)</span>
+                </h3>
+                <div class="hmi-mode-switch">
+                    <button class="hmi-mode-btn local active" id="hmiLocalModeBtn">
+                        <span class="text-zh">切换为就地模式</span>
+                        <span class="text-fr">Passer en mode local</span>
+                    </button>
+                    <button class="hmi-mode-btn remote" id="hmiRemoteModeBtn">
+                        <span class="text-zh">切换为远程模式</span>
+                        <span class="text-fr">Passer en mode distant</span>
+                    </button>
+                </div>
+                <div class="hmi-grid">
+                    <div class="hmi-controls">
+                        <button class="hmi-btn hmi-start-btn" id="hmiStartBtn" disabled>
+                            <span class="text-zh">远程启动 (仅远程模式可用)</span>
+                            <span class="text-fr">Démarrage distant (mode distant seulement)</span>
+                        </button>
+                        <button class="hmi-btn hmi-stop-btn" id="hmiStopBtn">
+                            <span class="text-zh">远程停止</span>
+                            <span class="text-fr">Arrêt distant</span>
+                        </button>
+                        <button class="hmi-btn hmi-reset-btn" id="hmiResetBtn">
+                            <span class="text-zh">远程复位</span>
+                            <span class="text-fr">Réinitialisation distante</span>
+                        </button>
+                    </div>
+                    <div class="hmi-status">
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">控制模式：</span>
+                                <span class="text-fr">Mode de commande : </span>
+                            </span>
+                            <span class="status-value" id="hmiMode">
+                                <span class="text-zh">就地</span>
+                                <span class="text-fr">Local</span>
+                            </span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">电机状态：</span>
+                                <span class="text-fr">État moteur : </span>
+                            </span>
+                            <span class="status-value status-stopped" id="hmiMotorStatus">
+                                <span class="text-zh">停止</span>
+                                <span class="text-fr">Arrêté</span>
+                            </span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">故障状态：</span>
+                                <span class="text-fr">État de panne : </span>
+                            </span>
+                            <span class="status-value" id="hmiFaultStatus">
+                                <span class="text-zh">无故障</span>
+                                <span class="text-fr">Aucune panne</span>
+                            </span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">电机电流：</span>
+                                <span class="text-fr">Courant moteur : </span>
+                            </span>
+                            <span class="status-value" id="hmiCurrent">0.0 A</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">绕组温度：</span>
+                                <span class="text-fr">Température enroulement : </span>
+                            </span>
+                            <span class="status-value" id="hmiTemp">25.0 ℃</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">运行小时数：</span>
+                                <span class="text-fr">Heures de fonctionnement : </span>
+                            </span>
+                            <span class="status-value" id="hmiOperatingHours">0.0 h</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">
+                                <span class="text-zh">启停次数：</span>
+                                <span class="text-fr">Nombre de démarrages : </span>
+                            </span>
+                            <span class="status-value" id="hmiSwitchCount">0 次</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 细节视图 -->
+        <div class="detail-view" id="detailView">
+            <div class="detail-section">
+                <h3 class="detail-title">
+                    <span class="text-zh">1. PROFINET参数配置（Basic Type 3 专属）</span>
+                    <span class="text-fr">1. Configuration PROFINET (exclusif Basic Type 3)</span>
+                </h3>
+                <table>
+                    <tr>
+                        <th>
+                            <span class="text-zh">配置项</span>
+                            <span class="text-fr">Élément</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">配置值</span>
+                            <span class="text-fr">Valeur</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">说明</span>
+                            <span class="text-fr">Description</span>
+                        </th>
+                    </tr>
+                    <tr>
+                        <td>Basic Type</td>
+                        <td class="byte-highlight">3</td>
+                        <td>
+                            <span class="text-zh">固定选择，支持8字节输入通信（Byte0~Byte7）</span>
+                            <span class="text-fr">Sélection fixe, prend en charge 8 octets d'entrée (Byte0~Byte7)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="text-zh">输出字节（PLC→SIMOCODE）</span>
+                            <span class="text-fr">Octets de sortie (PLC→SIMOCODE)</span>
+                        </td>
+                        <td class="byte-highlight">2 字节（QW512）</td>
+                        <td>
+                            <span class="text-zh">控制指令：启停、复位、模式选择</span>
+                            <span class="text-fr">Commandes : Démarrage/arrêt, réinitialisation, sélection de mode</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="text-zh">输入字节（SIMOCODE→PLC）</span>
+                            <span class="text-fr">Octets d'entrée (SIMOCODE→PLC)</span>
+                        </td>
+                        <td class="byte-highlight">8 字节（IW512）</td>
+                        <td>
+                            <span class="text-zh">按「核心状态（Byte0~Byte1）→运行统计（Byte2~Byte3）→模拟量（Byte4~Byte7）」划分</span>
+                            <span class="text-fr">Divisé en "État cœur (Byte0~Byte1) → Statistiques (Byte2~Byte3) → Analogiques (Byte4~Byte7)"</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="text-zh">电机额定电流（In）</span>
+                            <span class="text-fr">Courant nominal moteur (In)</span>
+                        </td>
+                        <td class="byte-highlight">25 A</td>
+                        <td>
+                            <span class="text-zh">模拟量电流换算基准（Byte4~Byte5对应最大值25A）</span>
+                            <span class="text-fr">Référence de conversion courant analogique (Byte4~Byte5 correspondent à 25A max)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <span class="text-zh">最高允许温度</span>
+                            <span class="text-fr">Température maximale autorisée</span>
+                        </td>
+                        <td class="byte-highlight">155 ℃</td>
+                        <td>
+                            <span class="text-zh">模拟量温度换算基准（Byte6~Byte7对应最大值155℃）</span>
+                            <span class="text-fr">Référence de conversion température analogique (Byte6~Byte7 correspondent à 155℃ max)</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="detail-section">
+                <h3 class="detail-title">
+                    <span class="text-zh">2. 循环接收数据（PLC→SIMOCODE，2字节 QW512）</span>
+                    <span class="text-fr">2. Données réception (PLC→SIMOCODE, 2 octets QW512)</span>
+                </h3>
+                <table>
+                    <tr>
+                        <th>
+                            <span class="text-zh">字节.位</span>
+                            <span class="text-fr">Octet.Bit</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">信号名称</span>
+                            <span class="text-fr">Nom du signal</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">功能说明</span>
+                            <span class="text-fr">Description</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">当前状态</span>
+                            <span class="text-fr">État actuel</span>
+                        </th>
+                    </tr>
+                    <tr id="comm-q00">
+                        <td>Byte0.0</td>
+                        <td>ON_Cmd</td>
+                        <td>
+                            <span class="text-zh">电机启动命令（就地/远程共用）</span>
+                            <span class="text-fr">Commande démarrage (commune local/distant)</span>
+                        </td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-q01">
+                        <td>Byte0.1</td>
+                        <td>OFF_Cmd</td>
+                        <td>
+                            <span class="text-zh">电机停止命令（优先级最高，全模式通用）</span>
+                            <span class="text-fr">Commande arrêt (priorité max, tous modes)</span>
+                        </td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-q02">
+                        <td>Byte0.2</td>
+                        <td>Reset_Cmd</td>
+                        <td>
+                            <span class="text-zh">故障复位命令</span>
+                            <span class="text-fr">Commande réinitialisation panne</span>
+                        </td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-q03">
+                        <td>Byte0.3</td>
+                        <td>Mode_Select_Bit0</td>
+                        <td>
+                            <span class="text-zh">模式选择位0</span>
+                            <span class="text-fr">Bit 0 sélection de mode</span>
+                        </td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-q04">
+                        <td>Byte0.4</td>
+                        <td>Mode_Select_Bit1</td>
+                        <td>
+                            <span class="text-zh">模式选择位1</span>
+                            <span class="text-fr">Bit 1 sélection de mode</span>
+                        </td>
+                        <td>0</td>
+                    </tr>
+                </table>
+                <p style="margin-top: 10px; font-weight: 500;">
+                    <span class="text-zh">模式选择逻辑：00=就地模式，01=远程模式，10=调试模式，11=锁定模式</span>
+                    <span class="text-fr">Logique sélection mode : 00=Local, 01=Distant, 10=Dépannage, 11=Verrouillé</span>
+                </p>
+            </div>
+            <div class="detail-section">
+                <h3 class="detail-title">
+                    <span class="text-zh">3. 循环发送数据（SIMOCODE→PLC，8字节 IW512）- Basic Type 3 完整映射</span>
+                    <span class="text-fr">3. Données envoi (SIMOCODE→PLC, 8 octets IW512) - Mapping complet Basic Type 3</span>
+                </h3>
+                <table>
+                    <tr>
+                        <th>
+                            <span class="text-zh">字节.位</span>
+                            <span class="text-fr">Octet.Bit</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">信号名称</span>
+                            <span class="text-fr">Nom du signal</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">功能说明</span>
+                            <span class="text-fr">Description</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">启用状态</span>
+                            <span class="text-fr">État d'activation</span>
+                        </th>
+                        <th>
+                            <span class="text-zh">当前状态</span>
+                            <span class="text-fr">État actuel</span>
+                        </th>
+                    </tr>
+                    <!-- 核心状态：Byte0~Byte1 -->
+                    <tr class="section-divider">
+                        <td colspan="5">
+                            <span class="text-zh">核心状态映射（Byte0~Byte1）- 必须启用</span>
+                            <span class="text-fr">Mapping état cœur (Byte0~Byte1) - Activation obligatoire</span>
+                        </td>
+                    </tr>
+                    <tr id="comm-i00">
+                        <td>Byte0.0</td>
+                        <td>Status_OFF</td>
+                        <td>
+                            <span class="text-zh">主接触器分闸反馈（电机停止）</span>
+                            <span class="text-fr">Retour déconnexion contacteur (moteur arrêté)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td class="bit-active">1</td>
+                    </tr>
+                    <tr id="comm-i01">
+                        <td>Byte0.1</td>
+                        <td>Status_ON</td>
+                        <td>
+                            <span class="text-zh">主接触器合闸反馈（电机运行）</span>
+                            <span class="text-fr">Retour connexion contacteur (moteur en fonction)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i02">
+                        <td>Byte0.2</td>
+                        <td>Ready</td>
+                        <td>
+                            <span class="text-zh">设备就绪（无故障、可合闸）</span>
+                            <span class="text-fr">Appareil prêt (sans panne, prêt à démarrer)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td class="bit-active">1</td>
+                    </tr>
+                    <tr id="comm-i03">
+                        <td>Byte0.3</td>
+                        <td>Overload</td>
+                        <td>
+                            <span class="text-zh">电机过载故障（热保护动作）</span>
+                            <span class="text-fr">Panne surcharge moteur (protection thermique)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i04">
+                        <td>Byte0.4</td>
+                        <td>Thermistor_Trip</td>
+                        <td>
+                            <span class="text-zh">电机热敏电阻故障（绕组超温）</span>
+                            <span class="text-fr">Panne thermistance moteur (surchauffe enroulement)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i05">
+                        <td>Byte0.5</td>
+                        <td>Ground_Fault</td>
+                        <td>
+                            <span class="text-zh">电机接地故障</span>
+                            <span class="text-fr">Panne de mise à la terre moteur</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i06">
+                        <td>Byte0.6</td>
+                        <td>Short_Circuit</td>
+                        <td>
+                            <span class="text-zh">电机短路故障</span>
+                            <span class="text-fr">Panne de court-circuit moteur</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i07">
+                        <td>Byte0.7</td>
+                        <td>Stator_Imbalance</td>
+                        <td>
+                            <span class="text-zh">电机电流不平衡 / 失相</span>
+                            <span class="text-fr">Déséquilibre de courant / perte de phase</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i10">
+                        <td>Byte1.0</td>
+                        <td>Underload_Fault</td>
+                        <td>
+                            <span class="text-zh">电机欠载故障</span>
+                            <span class="text-fr">Panne de sous-charge moteur</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i11">
+                        <td>Byte1.1</td>
+                        <td>Local_Mode_Active</td>
+                        <td>
+                            <span class="text-zh">本地控制模式激活</span>
+                            <span class="text-fr">Activation mode contrôle local</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td class="bit-active">1</td>
+                    </tr>
+                    <tr id="comm-i12">
+                        <td>Byte1.2</td>
+                        <td>Remote_Mode_Active</td>
+                        <td>
+                            <span class="text-zh">远程控制模式激活（PLC控制）</span>
+                            <span class="text-fr">Activation mode contrôle distant (PLC)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i13">
+                        <td>Byte1.3</td>
+                        <td>Safety_Trip</td>
+                        <td>
+                            <span class="text-zh">安全回路故障（DM-F模块）</span>
+                            <span class="text-fr">Panne circuit sécurité (module DM-F)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i14">
+                        <td>Byte1.4</td>
+                        <td>Free</td>
+                        <td>
+                            <span class="text-zh">预留位（用户自定义）</span>
+                            <span class="text-fr">Bit réservé (personnalisation utilisateur)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i15">
+                        <td>Byte1.5</td>
+                        <td>Free</td>
+                        <td>
+                            <span class="text-zh">预留位（用户自定义）</span>
+                            <span class="text-fr">Bit réservé (personnalisation utilisateur)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i16">
+                        <td>Byte1.6</td>
+                        <td>Free</td>
+                        <td>
+                            <span class="text-zh">预留位（用户自定义）</span>
+                            <span class="text-fr">Bit réservé (personnalisation utilisateur)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <tr id="comm-i17">
+                        <td>Byte1.7</td>
+                        <td>Free</td>
+                        <td>
+                            <span class="text-zh">预留位（用户自定义）</span>
+                            <span class="text-fr">Bit réservé (personnalisation utilisateur)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0</td>
+                    </tr>
+                    <!-- 运行统计：Byte2~Byte3 -->
+                    <tr class="section-divider">
+                        <td colspan="5">
+                            <span class="text-zh">运行统计映射（Byte2~Byte3）- 二选一启用</span>
+                            <span class="text-fr">Mapping statistiques (Byte2~Byte3) - Activation alternative</span>
+                        </td>
+                    </tr>
+                    <tr id="comm-i20">
+                        <td>Byte2</td>
+                        <td>Operating_Hours_LSB</td>
+                        <td>
+                            <span class="text-zh">电机运行小时数 低8位</span>
+                            <span class="text-fr">Heures de fonctionnement LSB (8 bits)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td id="operatingHoursLSB">0x00</td>
+                    </tr>
+                    <tr id="comm-i30">
+                        <td>Byte3</td>
+                        <td>Operating_Hours_MSB</td>
+                        <td>
+                            <span class="text-zh">电机运行小时数 高8位（组合为16位数据）</span>
+                            <span class="text-fr">Heures de fonctionnement MSB (16 bits combinés)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td id="operatingHoursMSB">0x00</td>
+                    </tr>
+                    <tr id="comm-i21">
+                        <td>Byte2</td>
+                        <td>Switch_Count_LSB</td>
+                        <td>
+                            <span class="text-zh">电机开关次数 低8位（备选）</span>
+                            <span class="text-fr">Nombre de commutations LSB (alternative)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0x00</td>
+                    </tr>
+                    <tr id="comm-i31">
+                        <td>Byte3</td>
+                        <td>Switch_Count_MSB</td>
+                        <td>
+                            <span class="text-zh">电机开关次数 高8位（备选）</span>
+                            <span class="text-fr">Nombre de commutations MSB (alternative)</span>
+                        </td>
+                        <td><span class="disable-tag">禁用</span></td>
+                        <td>0x00</td>
+                    </tr>
+                    <!-- 模拟量：Byte4~Byte7 -->
+                    <tr class="section-divider">
+                        <td colspan="5">
+                            <span class="text-zh">模拟量映射（Byte4~Byte7）- Basic Type 3核心扩展</span>
+                            <span class="text-fr">Mapping analogiques (Byte4~Byte7) - Extension cœur Basic Type 3</span>
+                        </td>
+                    </tr>
+                    <tr id="comm-i40">
+                        <td>Byte4+Byte5</td>
+                        <td>Motor_Current</td>
+                        <td>
+                            <span class="text-zh">电机运行电流（16位模拟量，滤波启用）</span>
+                            <span class="text-fr">Courant moteur (16 bits analogique, filtrage activé)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td id="motorCurrentAnalog">00 00</td>
+                    </tr>
+                    <tr id="comm-i60">
+                        <td>Byte6+Byte7</td>
+                        <td>Motor_Temperature</td>
+                        <td>
+                            <span class="text-zh">电机绕组温度（16位模拟量）</span>
+                            <span class="text-fr">Température enroulement moteur (16 bits analogique)</span>
+                        </td>
+                        <td><span class="enable-tag">启用</span></td>
+                        <td id="motorTempAnalog">00 00</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <!-- 实时通信数据提示 -->
+    <div class="communication-status">
+        <div class="comm-title">
+            <span class="text-zh">实时通信数据（Basic Type 3）</span>
+            <span class="text-fr">Données communication temps réel (Basic Type 3)</span>
+        </div>
+        <div class="comm-data">
+            <span>
+                <span class="text-zh">控制模式：</span>
+                <span class="text-fr">Mode commande : </span>
+            </span>
+            <span id="comm-mode">
+                <span class="text-zh">就地</span>
+                <span class="text-fr">Local</span>
+            </span>
+        </div>
+        <div class="comm-data">
+            <span>
+                <span class="text-zh">电机状态：</span>
+                <span class="text-fr">État moteur : </span>
+            </span>
+            <span id="comm-motor-status">
+                <span class="text-zh">停止</span>
+                <span class="text-fr">Arrêté</span>
+            </span>
+        </div>
+        <div class="comm-data">
+            <span>QW512 (OUT) :</span>
+            <span id="comm-output">00 00</span>
+        </div>
+        <div class="comm-data">
+            <span>IW512 (IN) :</span>
+            <span id="comm-input">05 00 00 00 00 00 00 00</span>
+        </div>
+        <div class="comm-data">
+            <span>
+                <span class="text-zh">运行小时数：</span>
+                <span class="text-fr">Heures de fonctionnement : </span>
+            </span>
+            <span id="comm-operating-hours">0.0 h</span>
+        </div>
+        <div class="comm-data">
+            <span>
+                <span class="text-zh">电机温度：</span>
+                <span class="text-fr">Température moteur : </span>
+            </span>
+            <span id="comm-motor-temp">25.0 ℃</span>
+        </div>
+    </div>
+    <script>
+        // 全局状态变量 - 初始化（新增运行统计和模拟量相关）
+        let currentMode = 'local'; // local / remote
+        let motorRunning = false;
+        let motorFault = false;
+        let runtime = 0; // 运行小时数（浮点数，保留1位小数）
+        let runtime16bit = 0; // 16位运行小时数（Byte2+Byte3）
+        let switchCount = 0; // 启停次数
+        let current = 0.0; // 电机电流（15-25A，对应额定25A）
+        let temperature = 25.0; // 电机温度（25-120℃，对应最高155℃）
+        let fanRotationInterval = null;
+        let runtimeInterval = null;
+        let paramUpdateInterval = null;
+        // 电机铭牌参数（固定）
+        const RATED_CURRENT = 25; // 额定电流25A
+        const MAX_TEMPERATURE = 155; // 最高温度155℃
+        const MAX_16BIT = 65535; // 16位最大值
+
+        // ====================== 语言切换逻辑 ======================
+        document.getElementById('zhBtn').addEventListener('click', function() {
+            document.body.classList.remove('fr');
+            this.classList.add('active');
+            document.getElementById('frBtn').classList.remove('active');
+        });
+        document.getElementById('frBtn').addEventListener('click', function() {
+            document.body.classList.add('fr');
+            this.classList.add('active');
+            document.getElementById('zhBtn').classList.remove('active');
+        });
+
+        // ====================== 视图切换逻辑 ======================
+        document.getElementById('overviewBtn').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('detailBtn').classList.remove('active');
+            document.getElementById('overviewView').style.display = 'grid';
+            document.getElementById('detailView').style.display = 'none';
+        });
+        document.getElementById('detailBtn').addEventListener('click', function() {
+            this.classList.add('active');
+            document.getElementById('overviewBtn').classList.remove('active');
+            document.getElementById('detailView').style.display = 'block';
+            document.getElementById('overviewView').style.display = 'none';
+            // 切换时更新运行小时数和模拟量的十六进制显示
+            updateRuntimeHex();
+            updateAnalogHex();
+        });
+
+        // ====================== 模式切换逻辑 ======================
+        document.getElementById('hmiLocalModeBtn').addEventListener('click', function() {
+            setMode('local');
+        });
+        document.getElementById('hmiRemoteModeBtn').addEventListener('click', function() {
+            setMode('remote');
+        });
+
+        // 模式设置函数 - 核心逻辑（含通信位同步）
+        function setMode(mode) {
+            currentMode = mode;
+            if (mode === 'local') {
+                document.getElementById('hmiLocalModeBtn').classList.add('active');
+                document.getElementById('hmiRemoteModeBtn').classList.remove('active');
+                document.getElementById('localStartBtn').disabled = motorFault;
+                document.getElementById('hmiStartBtn').disabled = true;
+                document.getElementById('localModeIndicator').className = 'local-mode-indicator indicator-local';
+                document.getElementById('localModeIndicator').innerHTML = `
+                    <span class="text-zh">当前模式：就地模式</span>
+                    <span class="text-fr">Mode actuel : Mode local</span>
+                `;
+                // 通信位同步：Mode_Select = 00
+                updateOutputBit('comm-q03', 0);
+                updateOutputBit('comm-q04', 0);
+                // 状态反馈位同步
+                updateInputBit('comm-i11', 1);
+                updateInputBit('comm-i12', 0);
+            } else {
+                document.getElementById('hmiRemoteModeBtn').classList.add('active');
+                document.getElementById('hmiLocalModeBtn').classList.remove('active');
+                document.getElementById('localStartBtn').disabled = true;
+                document.getElementById('hmiStartBtn').disabled = motorFault;
+                document.getElementById('localModeIndicator').className = 'local-mode-indicator indicator-remote';
+                document.getElementById('localModeIndicator').innerHTML = `
+                    <span class="text-zh">当前模式：远程模式（就地启动禁用）</span>
+                    <span class="text-fr">Mode actuel : Mode distant (démarrage local désactivé)</span>
+                `;
+                // 通信位同步：Mode_Select = 01
+                updateOutputBit('comm-q03', 0);
+                updateOutputBit('comm-q04', 1);
+                // 状态反馈位同步
+                updateInputBit('comm-i11', 0);
+                updateInputBit('comm-i12', 1);
+            }
+            // 更新模式显示文本
+            const modeTextZh = mode === 'local' ? '就地' : '远程';
+            const modeTextFr = mode === 'local' ? 'Local' : 'Distant';
+            document.getElementById('hmiMode').innerHTML = `
+                <span class="text-zh">${modeTextZh}</span>
+                <span class="text-fr">${modeTextFr}</span>
+            `;
+            document.getElementById('comm-mode').innerHTML = `
+                <span class="text-zh">${modeTextZh}</span>
+                <span class="text-fr">${modeTextFr}</span>
+            `;
+            updateCommBytes();
+        }
+
+        // ====================== 电机启动/停止逻辑（含运行统计和模拟量同步） ======================
+        // 就地启动
+        document.getElementById('localStartBtn').addEventListener('click', function() {
+            if (currentMode === 'local' && !motorFault && !motorRunning) {
+                startMotor();
+            }
+        });
+        // 远程启动
+        document.getElementById('hmiStartBtn').addEventListener('click', function() {
+            if (currentMode === 'remote' && !motorFault && !motorRunning) {
+                startMotor();
+            }
+        });
+        // 就地紧急停止
+        document.getElementById('localStopBtn').addEventListener('click', function() {
+            if (motorRunning) {
+                stopMotor();
+            }
+        });
+        // 远程停止
+        document.getElementById('hmiStopBtn').addEventListener('click', function() {
+            if (motorRunning) {
+                stopMotor();
+            }
+        });
+
+        // 电机启动函数 - 新增运行统计和模拟量同步
+        function startMotor() {
+            motorRunning = true;
+            switchCount++; // 启停次数+1
+            // 更新状态文本
+            document.getElementById('motorStatus').className = 'motor-status status-running';
+            document.getElementById('motorStatus').innerHTML = `
+                <span class="text-zh">状态：运行中</span>
+                <span class="text-fr">État : En fonctionnement</span>
+            `;
+            document.getElementById('hmiMotorStatus').className = 'status-value status-running';
+            document.getElementById('hmiMotorStatus').innerHTML = `
+                <span class="text-zh">运行中</span>
+                <span class="text-fr">En fonctionnement</span>
+            `;
+            document.getElementById('comm-motor-status').innerHTML = `
+                <span class="text-zh">运行中</span>
+                <span class="text-fr">En fonctionnement</span>
+            `;
+            // 更新启停次数显示
+            document.getElementById('hmiSwitchCount').textContent = switchCount + ' 次';
+            // 启动风扇旋转动画
+            let rotation = 0;
+            fanRotationInterval = setInterval(() => {
+                rotation += 5;
+                document.getElementById('motorFan').style.transform = `rotate(${rotation}deg)`;
+            }, 50);
+            // 启动运行时间统计（每1秒增加0.1小时）
+            runtimeInterval = setInterval(() => {
+                runtime += 0.1;
+                runtime = Math.round(runtime * 10) / 10; // 保留1位小数
+                runtime16bit = Math.min(Math.round(runtime * 10), MAX_16BIT); // 转换为16位整数（最大65535）
+                // 更新运行小时数显示
+                document.getElementById('totalOperatingHours').textContent = runtime.toFixed(1) + ' h';
+                document.getElementById('hmiOperatingHours').textContent = runtime.toFixed(1) + ' h';
+                document.getElementById('comm-operating-hours').textContent = runtime.toFixed(1) + ' h';
+                // 更新运行小时数十六进制
+                updateRuntimeHex();
+            }, 1000);
+            // 启动电流、温度模拟更新（每2秒一次）
+            paramUpdateInterval = setInterval(() => {
+                // 电流：15-25A波动（额定25A）
+                current = (Math.random() * 10 + 15).toFixed(1);
+                // 温度：运行时25-120℃波动（最高155℃）
+                temperature = (Math.random() * 95 + 25).toFixed(1);
+                // 更新所有显示位置
+                document.getElementById('realTimeCurrent').textContent = current + ' A';
+                document.getElementById('hmiCurrent').textContent = current + ' A';
+                document.getElementById('realTimeTemp').textContent = temperature + ' ℃';
+                document.getElementById('hmiTemp').textContent = temperature + ' ℃';
+                document.getElementById('comm-motor-temp').textContent = temperature + ' ℃';
+                // 同步模拟量十六进制
+                updateAnalogHex();
+            }, 2000);
+            // 通信位同步 - 启动
+            updateOutputBit('comm-q00', 1);
+            updateOutputBit('comm-q01', 0);
+            updateInputBit('comm-i00', 0);
+            updateInputBit('comm-i01', 1);
+            updateInputBit('comm-i02', 1);
+            updateInputBit('comm-i03', 0);
+            updateInputBit('comm-i04', 0);
+            updateInputBit('comm-i05', 0);
+            updateInputBit('comm-i06', 0);
+            updateInputBit('comm-i07', 0);
+            // 强制更新通信字节
+            updateCommBytes();
+        }
+
+        // 电机停止函数 - 同步停止统计和模拟量更新
+        function stopMotor() {
+            motorRunning = false;
+            // 更新状态文本
+            document.getElementById('motorStatus').className = 'motor-status status-stopped';
+            document.getElementById('motorStatus').innerHTML = `
+                <span class="text-zh">状态：停止</span>
+                <span class="text-fr">État : Arrêté</span>
+            `;
+            document.getElementById('hmiMotorStatus').className = 'status-value status-stopped';
+            document.getElementById('hmiMotorStatus').innerHTML = `
+                <span class="text-zh">停止</span>
+                <span class="text-fr">Arrêté</span>
+            `;
+            document.getElementById('comm-motor-status').innerHTML = `
+                <span class="text-zh">停止</span>
+                <span class="text-fr">Arrêté</span>
+            `;
+            // 停止动画和统计
+            clearInterval(fanRotationInterval);
+            clearInterval(runtimeInterval);
+            clearInterval(paramUpdateInterval);
+            // 温度恢复到室温25℃
+            temperature = 25.0;
+            current = 0.0;
+            // 重置实时参数显示
+            document.getElementById('realTimeCurrent').textContent = current + ' A';
+            document.getElementById('hmiCurrent').textContent = current + ' A';
+            document.getElementById('realTimeTemp').textContent = temperature + ' ℃';
+            document.getElementById('hmiTemp').textContent = temperature + ' ℃';
+            document.getElementById('comm-motor-temp').textContent = temperature + ' ℃';
+            // 通信位同步 - 停止
+            updateOutputBit('comm-q01', 1);
+            updateOutputBit('comm-q00', 0);
+            updateInputBit('comm-i00', 1);
+            updateInputBit('comm-i01', 0);
+            // 强制更新通信字节
+            updateCommBytes();
+            updateAnalogHex();
+        }
+
+        // ====================== 故障触发与复位逻辑 ======================
+        // 手动触发过载故障
+        document.getElementById('faultSwitchBtn').addEventListener('click', function() {
+            if (!motorFault) {
+                triggerFault('Overload');
+                this.classList.add('active');
+                this.innerHTML = `
+                    <span class="text-zh">故障已触发（点击复位）</span>
+                    <span class="text-fr">Panne déclenchée (cliquez pour réinitialiser)</span>
+                `;
+            } else {
+                resetFault();
+                this.classList.remove('active');
+                this.innerHTML = `
+                    <span class="text-zh">触发过载故障</span>
+                    <span class="text-fr">Déclencher panne surcharge</span>
+                `;
+            }
+        });
+
+        // 触发故障函数（支持多种故障类型）
+        function triggerFault(faultType) {
+            motorFault = true;
+            stopMotor();
+            // 更新故障状态显示
+            let faultTextZh = '';
+            let faultTextFr = '';
+            switch(faultType) {
+                case 'Overload':
+                    faultTextZh = '过载故障';
+                    faultTextFr = 'Panne surcharge';
+                    updateInputBit('comm-i03', 1);
+                    break;
+                case 'Thermistor':
+                    faultTextZh = '热敏电阻故障';
+                    faultTextFr = 'Panne thermistance';
+                    updateInputBit('comm-i04', 1);
+                    break;
+                case 'Ground':
+                    faultTextZh = '接地故障';
+                    faultTextFr = 'Panne mise à la terre';
+                    updateInputBit('comm-i05', 1);
+                    break;
+                case 'ShortCircuit':
+                    faultTextZh = '短路故障';
+                    faultTextFr = 'Panne court-circuit';
+                    updateInputBit('comm-i06', 1);
+                    break;
+                case 'Imbalance':
+                    faultTextZh = '电流不平衡故障';
+                    faultTextFr = 'Panne déséquilibre courant';
+                    updateInputBit('comm-i07', 1);
+                    break;
+            }
+            document.getElementById('motorStatus').className = 'motor-status status-fault';
+            document.getElementById('motorStatus').innerHTML = `
+                <span class="text-zh">状态：${faultTextZh}</span>
+                <span class="text-fr">État : ${faultTextFr}</span>
+            `;
+            document.getElementById('hmiMotorStatus').className = 'status-value status-fault';
+            document.getElementById('hmiMotorStatus').innerHTML = `
+                <span class="text-zh">${faultTextZh}</span>
+                <span class="text-fr">${faultTextFr}</span>
+            `;
+            document.getElementById('hmiFaultStatus').className = 'status-value fault-value';
+            document.getElementById('hmiFaultStatus').innerHTML = `
+                <span class="text-zh">${faultTextZh}</span>
+                <span class="text-fr">${faultTextFr}</span>
+            `;
+            document.getElementById('comm-motor-status').innerHTML = `
+                <span class="text-zh">${faultTextZh}</span>
+                <span class="text-fr">${faultTextFr}</span>
+            `;
+            // 禁用启动按钮
+            document.getElementById('localStartBtn').disabled = true;
+            document.getElementById('hmiStartBtn').disabled = true;
+            // 设备就绪状态置0
+            updateInputBit('comm-i02', 0);
+            updateCommBytes();
+        }
+
+        // 故障复位
+        document.getElementById('localResetBtn').addEventListener('click', resetFault);
+        document.getElementById('hmiResetBtn').addEventListener('click', resetFault);
+
+        function resetFault() {
+            if (motorFault) {
+                motorFault = false;
+                // 重置所有故障位
+                updateInputBit('comm-i03', 0);
+                updateInputBit('comm-i04', 0);
+                updateInputBit('comm-i05', 0);
+                updateInputBit('comm-i06', 0);
+                updateInputBit('comm-i07', 0);
+                // 恢复就绪状态
+                updateInputBit('comm-i02', 1);
+                // 更新状态显示
+                document.getElementById('motorStatus').className = 'motor-status status-stopped';
+                document.getElementById('motorStatus').innerHTML = `
+                    <span class="text-zh">状态：停止</span>
+                    <span class="text-fr">État : Arrêté</span>
+                `;
+                document.getElementById('hmiMotorStatus').className = 'status-value status-stopped';
+                document.getElementById('hmiMotorStatus').innerHTML = `
+                    <span class="text-zh">停止</span>
+                    <span class="text-fr">Arrêté</span>
+                `;
+                document.getElementById('hmiFaultStatus').className = 'status-value';
+                document.getElementById('hmiFaultStatus').innerHTML = `
+                    <span class="text-zh">无故障</span>
+                    <span class="text-fr">Aucune panne</span>
+                `;
+                document.getElementById('comm-motor-status').innerHTML = `
+                    <span class="text-zh">停止</span>
+                    <span class="text-fr">Arrêté</span>
+                `;
+                // 启用对应模式的启动按钮
+                if (currentMode === 'local') {
+                    document.getElementById('localStartBtn').disabled = false;
+                } else {
+                    document.getElementById('hmiStartBtn').disabled = false;
+                }
+                // 发送复位脉冲
+                updateOutputBit('comm-q02', 1);
+                setTimeout(() => {
+                    updateOutputBit('comm-q02', 0);
+                    updateCommBytes();
+                }, 500);
+                updateCommBytes();
+            }
+        }
+
+        // ====================== 通信位同步工具函数 ======================
+        /**
+         * 更新输出位（QW512）状态
+         * @param {string} elementId 行ID
+         * @param {number} value 0/1
+         */
+        function updateOutputBit(elementId, value) {
+            const row = document.getElementById(elementId);
+            const statusCell = row.cells[3];
+            statusCell.textContent = value;
+        }
+        /**
+         * 更新输入位（IW512）状态
+         * @param {string} elementId 行ID
+         * @param {number} value 0/1
+         */
+        function updateInputBit(elementId, value) {
+            const row = document.getElementById(elementId);
+            const statusCell = row.cells[3];
+            statusCell.textContent = value;
+            // 更新bit-active样式
+            if (value === 1) {
+                statusCell.classList.add('bit-active');
+            } else {
+                statusCell.classList.remove('bit-active');
+            }
+        }
+        /**
+         * 计算并更新QW512和IW512的完整字节值
+         */
+        function updateCommBytes() {
+            // ====================== 计算QW512（输出字节） ======================
+            const q00 = parseInt(document.getElementById('comm-q00').cells[3].textContent);
+            const q01 = parseInt(document.getElementById('comm-q01').cells[3].textContent);
+            const q02 = parseInt(document.getElementById('comm-q02').cells[3].textContent);
+            const q03 = parseInt(document.getElementById('comm-q03').cells[3].textContent);
+            const q04 = parseInt(document.getElementById('comm-q04').cells[3].textContent);
+            
+            // 按位计算Byte0值（仅使用0-4位，其余位为0）
+            const qw512Byte0 = (q04 << 4) | (q03 << 3) | (q02 << 2) | (q01 << 1) | q00;
+            const qw512Byte1 = 0; // Basic Type 3 中Byte1未使用
+            
+            // 转换为两位十六进制并大写
+            const qw512Hex = [
+                qw512Byte0.toString(16).padStart(2, '0').toUpperCase(),
+                qw512Byte1.toString(16).padStart(2, '0').toUpperCase()
+            ].join(' ');
+            document.getElementById('comm-output').textContent = qw512Hex;
+            // ====================== 计算IW512（输入字节） ======================
+            const i00 = parseInt(document.getElementById('comm-i00').cells[3].textContent);
+            const i01 = parseInt(document.getElementById('comm-i01').cells[3].textContent);
+            const i02 = parseInt(document.getElementById('comm-i02').cells[3].textContent);
+            const i03 = parseInt(document.getElementById('comm-i03').cells[3].textContent);
+            const i11 = parseInt(document.getElementById('comm-i11').cells[3].textContent);
+            const i12 = parseInt(document.getElementById('comm-i12').cells[3].textContent);
+            // 获取电流字节
+            const currentAnalog = document.getElementById('motorCurrentAnalog').textContent.split(' ');
+            const iw512Byte2 = currentAnalog[0] || '00';
+            const iw512Byte3 = currentAnalog[1] || '00';
+            
+            // 计算Byte0值（0-3位）
+            const iw512Byte0 = (i03 << 3) | (i02 << 2) | (i01 << 1) | i00;
+            // 计算Byte1值（仅1-2位）
+            const iw512Byte1 = (i12 << 2) | (i11 << 1);
+            // 其余字节保持0
+            const iw512Hex = [
+                iw512Byte0.toString(16).padStart(2, '0').toUpperCase(),
+                iw512Byte1.toString(16).padStart(2, '0').toUpperCase(),
+                iw512Byte2,
+                iw512Byte3,
+                '00', '00', '00', '00'
+            ].join(' ');
+            document.getElementById('comm-input').textContent = iw512Hex;
+        }
+        /**
+         * 更新运行小时数十六进制显示
+         */
+        function updateRuntimeHex() {
+            if (runtime16bit > 0) {
+                const lsb = runtime16bit & 0xFF;
+                const msb = (runtime16bit >> 8) & 0xFF;
+                document.getElementById('operatingHoursLSB').textContent = '0x' + lsb.toString(16).padStart(2, '0').toUpperCase();
+                document.getElementById('operatingHoursMSB').textContent = '0x' + msb.toString(16).padStart(2, '0').toUpperCase();
+            }
+        }
+        /**
+         * 更新模拟量十六进制显示
+         */
+        function updateAnalogHex() {
+            // 电流：0-25A -> 0-65535
+            const currentValue = Math.round((current / 25) * 65535);
+            const currentByte4 = (currentValue >> 8) & 0xFF;
+            const currentByte5 = currentValue & 0xFF;
+            document.getElementById('motorCurrentAnalog').textContent = 
+                currentByte4.toString(16).padStart(2, '0').toUpperCase() + ' ' +
+                currentByte5.toString(16).padStart(2, '0').toUpperCase();
+            
+            // 温度：25-155℃ -> 0-65535
+            const tempValue = Math.round(((temperature - 25) / 130) * 65535);
+            const tempByte6 = (tempValue >> 8) & 0xFF;
+            const tempByte7 = tempValue & 0xFF;
+            document.getElementById('motorTempAnalog').textContent = 
+                tempByte6.toString(16).padStart(2, '0').toUpperCase() + ' ' +
+                tempByte7.toString(16).padStart(2, '0').toUpperCase();
+        }
+        // 初始化通信字节显示
+        updateCommBytes();
+    </script>
+</body>
+</html>
